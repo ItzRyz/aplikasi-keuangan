@@ -6,10 +6,144 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id Int @id @default(autoincrement())
+
+  email    String @unique
+  name     String
+  password String
+
+  role UserRole @default(STUDENT)
+
+  classId Int?   @map("class_id")
+  class   Class? @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  Transaction Transaction[]
+  Expense     Expense[]
+
+  @@map("users")
+}
+
+model Category {
+  id Int @id @default(autoincrement())
+
+  name String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Class {
+  id Int @id @default(autoincrement())
+
+  name        String
+  grade       String
+  major       String
+  classNumber String
+
+  weeklyFee Int @default(10000)
+
+  students     User[]
+  transactions Transaction[]
+  expenses     Expense[]
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  BalanceClass BalanceClass?
+
+  @@map("classes")
+}
+
+model Expense {
+  id Int @id @default(autoincrement())
+
+  title       String
+  description String?
+  amount      Int
+  category    String
+  status      ExpenseStatus @default(PENDING)
+
+  approvedById Int?  @map("approved_by_id")
+  approvedBy   User? @relation(fields: [approvedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  classId Int?   @map("class_id")
+  class   Class? @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  approvedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("expenses")
+}
+
+model Transaction {
+  id Int @id @default(autoincrement())
+
+  amount      Int
+  type        TransactionType
+  status      TransactionStatus @default(PENDING)
+  description String?
+
+  midtransId String? @unique
+  paymentUrl String?
+
+  userId Int  @map("user_id")
+  user   User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  classId Int?   @map("class_id")
+  Class   Class? @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("transactions")
+}
+
+model BalanceClass {
+  id Int @id @default(autoincrement())
+
+  balance Int @default(0) // Current balance in rupiah
+
+  classId Int   @unique
+  class   Class @relation(fields: [classId], references: [id])
+
+  updatedAt DateTime @updatedAt
+
+  @@map("class_balances")
+}
+
+enum UserRole {
+  STUDENT
+  ADMIN
+}
+
+enum TransactionType {
+  MONTHLY_FEE
+  SPECIAL_FEE
+  DONATION
+}
+
+enum TransactionStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
 }
